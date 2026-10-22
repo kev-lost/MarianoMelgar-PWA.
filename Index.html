@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mariano Melgar Alertas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e293b">
 </head>
@@ -40,15 +41,15 @@
         <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
             <h3 class="text-xs font-bold text-slate-400 uppercase mb-2">Historial Reciente</h3>
             <div id="mesh-logs" class="text-xs space-y-1 font-mono text-slate-300">
-                <p class="text-slate-500">Sin registros transmisiones aún.</p>
+                <p class="text-slate-500">Sin registros de transmisiones aún.</p>
             </div>
         </div>
     </main>
 
-    <!-- Vinculación con tu archivo de lógica (app.js) -->
+    <!-- Vinculación con tu archivo de lógica -->
     <script src="app.js"></script>
 
-    <!-- Registro automático del Service Worker de la PWA -->
+    <!-- Registro automático del Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
