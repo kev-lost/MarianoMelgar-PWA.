@@ -1,0 +1,21 @@
+{
+  "name": "Mariano Melgar Alertas",
+  "short_name": "MM Alertas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#ef4444",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/564/564619.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/564/564619.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
