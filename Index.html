@@ -1,98 +1,62 @@
-// Configuración de Producción
-const PUBLIC_VAPID_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvBX45TW3P24f_0O392_q0fO-7_L6q_p0p_o0123456789abcdefgh'; 
-const BACKEND_URL = 'https://servidor-alertas-node.onrender.com';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mariano Melgar Alertas</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e293b">
+</head>
+<body class="bg-slate-900 text-white font-sans p-4">
 
-// 1. Suscripción Real a Notificaciones Push
-async function subscribeToPushNotifications() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        alert("Tu dispositivo o navegador no admite notificaciones Push.");
-        return;
-    }
+    <header class="text-center my-6">
+        <h1 class="text-2xl font-bold text-red-500">🚨 Mariano Melgar Alertas</h1>
+        <p class="text-slate-400 text-sm">Sistema Vecinal de Emergencias y Alerta Sísmica</p>
+    </header>
 
-    try {
-        const reg = await navigator.serviceWorker.ready;
-        const permission = await Notification.requestPermission();
-        
-        if (permission !== 'granted') {
-            alert("Se requieren permisos de notificación para recibir alertas sísmicas.");
-            return;
+    <main class="max-w-md mx-auto space-y-4">
+        <!-- Botón de Suscripción a Notificaciones -->
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
+            <h2 class="font-semibold mb-2">Notificaciones de Emergencia</h2>
+            <button onclick="subscribeToPushNotifications()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg w-full transition">
+                🔔 Activar Notificaciones Push
+            </button>
+        </div>
+
+        <!-- Panel Red Mesh Vecinal -->
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <h2 class="font-semibold mb-2">Estado Vecinal (Red Mesh)</h2>
+            <select id="mesh-status-select" class="bg-slate-700 text-white p-2 rounded-lg w-full mb-3 border border-slate-600">
+                <option value="A Salvo">🟢 A Salvo</option>
+                <option value="Necesito Ayuda">🔴 Necesito Ayuda</option>
+                <option value="Evaluando Daños">🟡 Evaluando Daños</option>
+            </select>
+            <button onclick="broadcastMeshStatus()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg w-full transition">
+                📡 Transmitir Estado
+            </button>
+        </div>
+
+        <!-- Logs de Transmisión -->
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <h3 class="text-xs font-bold text-slate-400 uppercase mb-2">Historial Reciente</h3>
+            <div id="mesh-logs" class="text-xs space-y-1 font-mono text-slate-300">
+                <p class="text-slate-500">Sin registros transmisiones aún.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Vinculación con tu archivo de lógica (app.js) -->
+    <script src="app.js"></script>
+
+    <!-- Registro automático del Service Worker de la PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
+                    .catch(err => console.error('Error registrando Service Worker:', err));
+            });
         }
-
-        const subscription = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-        });
-
-        const response = await fetch(`${BACKEND_URL}/api/subscribe`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(subscription)
-        });
-
-        if (response.ok) {
-            alert("✅ ¡Dispositivo registrado! Recibirás notificaciones con la pantalla apagada.");
-        } else {
-            alert("No se pudo registrar la suscripción en el servidor.");
-        }
-    } catch (error) {
-        console.error("Error al suscribirse a Push:", error);
-        alert("Error al conectar con el servidor de notificaciones.");
-    }
-}
-
-// 2. Transmisión Real de Estado Vecinal (Red Mesh Servidor)
-async function broadcastMeshStatus() {
-    const statusSelect = document.getElementById('mesh-status-select');
-    const statusVal = statusSelect ? statusSelect.value : "A Salvo";
-    const payload = {
-        status: statusVal,
-        location: typeof userLocation !== 'undefined' ? userLocation : (typeof MARIANO_MELGAR_COORDS !== 'undefined' ? MARIANO_MELGAR_COORDS : null),
-        timestamp: new Date().toISOString()
-    };
-
-    try {
-        const res = await fetch(`${BACKEND_URL}/api/mesh/broadcast`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            updateMeshLogsUI(data.logs);
-        } else {
-            saveLocalMeshLog(statusVal);
-        }
-    } catch (err) {
-        saveLocalMeshLog(statusVal);
-    }
-}
-
-function saveLocalMeshLog(statusVal) {
-    const time = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-    const logs = JSON.parse(localStorage.getItem('mm_mesh_logs') || '[]');
-    logs.unshift({ status: statusVal, timestamp: time });
-    localStorage.setItem('mm_mesh_logs', JSON.stringify(logs.slice(0, 5)));
-    renderMeshLogs();
-}
-
-function updateMeshLogsUI(logs) {
-    const container = document.getElementById('mesh-logs');
-    if (!container) return;
-    container.innerHTML = logs.map(l => {
-        const time = new Date(l.timestamp).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-        return `<div class="pb-1 border-b border-slate-800/50">[${time}] ${l.status}</div>`;
-    }).join('');
-}
-
-// Convertidor de clave VAPID
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
+    </script>
+</body>
+</html>
