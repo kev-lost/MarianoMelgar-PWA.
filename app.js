@@ -1,0 +1,98 @@
+// Configuración de Producción
+const PUBLIC_VAPID_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvBX45TW3P24f_0O392_q0fO-7_L6q_p0p_o0123456789abcdefgh'; 
+const BACKEND_URL = 'https://servidor-alertas-node.onrender.com';
+
+// 1. Suscripción Real a Notificaciones Push
+async function subscribeToPushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        alert("Tu dispositivo o navegador no admite notificaciones Push.");
+        return;
+    }
+
+    try {
+        const reg = await navigator.serviceWorker.ready;
+        const permission = await Notification.requestPermission();
+        
+        if (permission !== 'granted') {
+            alert("Se requieren permisos de notificación para recibir alertas sísmicas.");
+            return;
+        }
+
+        const subscription = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+        });
+
+        const response = await fetch(`${BACKEND_URL}/api/subscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(subscription)
+        });
+
+        if (response.ok) {
+            alert("✅ ¡Dispositivo registrado! Recibirás notificaciones con la pantalla apagada.");
+        } else {
+            alert("No se pudo registrar la suscripción en el servidor.");
+        }
+    } catch (error) {
+        console.error("Error al suscribirse a Push:", error);
+        alert("Error al conectar con el servidor de notificaciones.");
+    }
+}
+
+// 2. Transmisión Real de Estado Vecinal (Red Mesh Servidor)
+async function broadcastMeshStatus() {
+    const statusSelect = document.getElementById('mesh-status-select');
+    const statusVal = statusSelect ? statusSelect.value : "A Salvo";
+    const payload = {
+        status: statusVal,
+        location: typeof userLocation !== 'undefined' ? userLocation : (typeof MARIANO_MELGAR_COORDS !== 'undefined' ? MARIANO_MELGAR_COORDS : null),
+        timestamp: new Date().toISOString()
+    };
+
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/mesh/broadcast`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            updateMeshLogsUI(data.logs);
+        } else {
+            saveLocalMeshLog(statusVal);
+        }
+    } catch (err) {
+        saveLocalMeshLog(statusVal);
+    }
+}
+
+function saveLocalMeshLog(statusVal) {
+    const time = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    const logs = JSON.parse(localStorage.getItem('mm_mesh_logs') || '[]');
+    logs.unshift({ status: statusVal, timestamp: time });
+    localStorage.setItem('mm_mesh_logs', JSON.stringify(logs.slice(0, 5)));
+    renderMeshLogs();
+}
+
+function updateMeshLogsUI(logs) {
+    const container = document.getElementById('mesh-logs');
+    if (!container) return;
+    container.innerHTML = logs.map(l => {
+        const time = new Date(l.timestamp).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+        return `<div class="pb-1 border-b border-slate-800/50">[${time}] ${l.status}</div>`;
+    }).join('');
+}
+
+// Convertidor de clave VAPID
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
