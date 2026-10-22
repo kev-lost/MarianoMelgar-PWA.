@@ -1,6 +1,6 @@
 // Configuración de Producción
 const PUBLIC_VAPID_KEY = 'TU_CLAVE_PUBLICA_VAPID_REAL'; 
-const BACKEND_URL = 'https://tu-servidor-en-render.onrender.com'; // Cambiar por tu URL HTTPS de Render
+const BACKEND_URL = 'https://servidor-alertas-node.onrender.com';
 
 // 1. Suscripción Real a Notificaciones Push
 async function subscribeToPushNotifications() {
@@ -46,7 +46,7 @@ async function broadcastMeshStatus() {
     const statusVal = statusSelect ? statusSelect.value : "A Salvo";
     const payload = {
         status: statusVal,
-        location: userLocation || MARIANO_MELGAR_COORDS,
+        location: typeof userLocation !== 'undefined' ? userLocation : (typeof MARIANO_MELGAR_COORDS !== 'undefined' ? MARIANO_MELGAR_COORDS : null),
         timestamp: new Date().toISOString()
     };
 
@@ -61,7 +61,6 @@ async function broadcastMeshStatus() {
             const data = await res.json();
             updateMeshLogsUI(data.logs);
         } else {
-            // Guardado de respaldo local si falla el servidor
             saveLocalMeshLog(statusVal);
         }
     } catch (err) {
